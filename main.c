@@ -806,9 +806,9 @@ int main(void) {
         if (enter == 's' || enter == 'S') {
             system("CLS");;
             struct log w;
-            while (c == 1) {
+            while (c == 1 || c==4) {
                 clear();
-                if (r==1) {
+                if (c==4) {
                     refresh();
                     move(4, 19);
                     printw("The username has already taken");
@@ -947,7 +947,7 @@ struct log signup(void) {
         if(strcmp(username,l.username)==0) {
             fclose(log);
             fseek(log, 0, SEEK_SET);
-            ll.what = 1;
+            ll.what = 4;
             return ll;
         }
     }
