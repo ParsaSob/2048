@@ -1,2 +1,2 @@
-parsa 64
+parsa 6
 lol 50

@@ -2,6 +2,34 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <curses.h>
+
+
+void print_borders(void){
+    init_pair(1, COLOR_RED, COLOR_BLACK);
+    attron(COLOR_PAIR(1));
+    refresh();
+    for(int i=0;i<70;i++){
+        move(0,i);
+        printw("-");
+        refresh();
+        move(22,i);
+        printw("-");
+        refresh();
+    }
+    refresh();
+    for(int i=0;i<23;i++){
+        move(i,0);
+        printw("|");
+        refresh();
+        move(i, 69);
+        printw("|");
+        refresh();
+    }
+    attroff(COLOR_PAIR(1));
+    refresh();
+}
+
 
 int isPowerOfTwo(int n) {
     int count = 0;
@@ -30,6 +58,7 @@ struct log login (void);
 struct log signup(void);
 
 int scoreboard (char username[30]) {
+    clear();
     struct usescore players[50];
     int num_players = 0;
 
@@ -51,11 +80,20 @@ int scoreboard (char username[30]) {
             }
         }
     }
-
-    printf("\nTop 10 Players:\n");
+    refresh();
+    print_borders();
+    refresh();
+    move(3,29);
+    attron(A_BLINK);
+    printw("Top 10 Players:");
+    attroff(A_BLINK);
+    refresh();
     for (int i = 0; i < num_players && i < 10; i++) {
         players[i].num = i;
-        printf("%d. %s - %d\n", i + 1, players[i].username, players[i].score);
+        refresh();
+        move(4+i,2);
+        printw("%d. %s - %d", i + 1, players[i].username, players[i].score);
+        refresh();
     }
     fseek(fp, 0, SEEK_SET);
     for (int i = 0; i < num_players; ++i) {
@@ -146,20 +184,36 @@ void add_tiles_verticaly(int board[20][20],int RC)
 void print_board(int board[20][20], int RC)
 {
     int a, b;
-    system("CLS");
+    init_pair(4, COLOR_GREEN,COLOR_BLACK);
+    init_pair(5,COLOR_MAGENTA,COLOR_BLACK);
+    clear();
+    refresh();
+    print_borders();
     for (a = 0; a < RC; ++a) {
-        printf("\n");
+        refresh();
+        move(11-(RC/2)+a,33-((RC+(RC-1)*2)/2));
         for (b = 0; b < RC; ++b) {
-            printf("%5i", board[a][b]);
+            if(board[a][b] == 0) {
+                refresh();
+                attron(COLOR_PAIR(4));
+                printw("[%d]", board[a][b]);
+                attroff(COLOR_PAIR(4));
+                refresh();
+            } else {
+                refresh();
+                attron(COLOR_PAIR(5));
+                printw("[%d]", board[a][b]);
+                attroff(COLOR_PAIR(5));
+                refresh();
+            }
         }
     }
-    printf("\n");
 }
-void reverse_board(char input[], int board[20][20], int RC)
+void reverse_board(char input, int board[20][20], int RC)
 {
     int a, b, c, tmp;
 
-    if (!strcmp(input, "right")) {
+    if (input == 'd' || input == 'D') {
         for (a = 0; a < RC; ++a) {
             for (b = 0, c = RC-1; b < RC/2; ++b, --c) {
                 tmp = board[a][b];
@@ -168,7 +222,7 @@ void reverse_board(char input[], int board[20][20], int RC)
             }
         }
     }
-    else if  (!strcmp(input, "down")) {
+    else if  (input == 's' || input == 'S') {
         for (a = 0; a < RC; ++a) {
             for (b = 0, c = RC-1; b < RC/2; ++b, --c) {
                 tmp = board[b][a];
@@ -221,25 +275,56 @@ void generate_random(int board[20][20], int empty_tiles, int RC )
 
 int play_game(int board[20][20], int RC)
 {
+    init_pair(6,COLOR_BLACK,COLOR_MAGENTA);
+    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(3, COLOR_RED, COLOR_BLACK);
+    init_pair(4, COLOR_GREEN, COLOR_BLACK);
+    int score = 0;
     int d = 0;
-    char movement[RC*RC*RC*RC];
+    char movement;
     int tiles = 0;
 
     print_board(board, RC);
+    refresh();
+    move(1,62);
+    attron(COLOR_PAIR(6));
+    printw("(%d)", score);
+    attroff(COLOR_PAIR(6));
+    refresh();
+    move(23,1);
+    printw("FOR UP PRESS 'W' || FOR DOWN PRESS 'S'");
+    refresh();
+    move(24,0);
+    printw(" FOR RIGHT PRESS 'D' || FOR LEFT PRESS 'A' || FOR EXIT JUST PRESS 'E'");
+    refresh();
     while (1) {
-        printf("(enter: left,right,up,down,exit)>> ");
-        scanf("%s", movement);
-        if (!strcmp(movement, "down")) {
+        refresh();
+        movement = getch();
+
+        if (movement == 's' || movement == 'S') {
             reverse_board(movement,board, RC);
             add_tiles_verticaly(board,RC);
             tiles = check_board(board, RC);
             if (tiles == -1) {
                 while(d==0) {
+                    clear();
+                    refresh();
+                    print_borders();
                     char con;
-                    printf("\nyou won!!!!!!!\n");
+                    refresh();
+                    move(5,30);
+                    attron(COLOR_PAIR(4));
+                    printw("YOU WON!!!");
+                    attroff(COLOR_PAIR(4));
+                    refresh();
                     d = 1;
-                    printf("\nDo you want to continue:\n for YES enter 'y'\n for NO enter 'n'\n");
-                    scanf(" %c", &con);
+                    move(7,23);
+                    printw("Do you want to continue:");
+                    refresh();
+                    move(8,17);
+                    printw("for YES enter 'Y' || for NO enter 'N'");
+                    refresh();
+                    con = getch();
                     if (con == 'N' || con == 'n') {
                         return -1;
                     }
@@ -249,34 +334,60 @@ int play_game(int board[20][20], int RC)
                 return 0;
             generate_random(board,tiles,RC);
             reverse_board(movement, board,RC);
-        } else if (!strcmp(movement, "up")) {
+        } else if (movement == 'w' || movement == 'W') {
             add_tiles_verticaly(board,RC);
             tiles = check_board(board,RC);
             if (tiles == -1) {
                 while(d==0) {
+                    clear();
+                    refresh();
+                    print_borders();
                     char con;
-                    printf("\nyou won!!!!!!!\n");
+                    refresh();
+                    move(5,30);
+                    attron(COLOR_PAIR(4));
+                    printw("YOU WON!!!");
+                    attroff(COLOR_PAIR(4));
+                    refresh();
                     d = 1;
-                    printf("\nDo you want to continue:\n for YES enter 'y'\n for NO enter 'n'\n");
-                    scanf(" %c", &con);
-                    if (con == 'n' || con == 'N') {
+                    move(7,23);
+                    printw("Do you want to continue:");
+                    refresh();
+                    move(8,17);
+                    printw("for YES enter 'Y' || for NO enter 'N'");
+                    refresh();
+                    con = getch();
+                    if (con == 'N' || con == 'n') {
                         return -1;
                     }
                 }
-            }  else if (tiles == 0)
+            } else if (tiles == 0)
                 return 0;
             generate_random(board,tiles,RC);
-        } else if (!strcmp(movement, "right")) {
+        } else if (movement == 'D' || movement == 'd') {
             reverse_board(movement,board,RC);
             add_tiles_horizontaly(board,RC);
             tiles = check_board(board,RC);
             if (tiles == -1) {
                 while(d==0) {
+                    clear();
+                    refresh();
+                    print_borders();
                     char con;
-                    printf("\nyou won!!!!!!!\n");
+                    refresh();
+                    move(5,30);
+                    attron(COLOR_PAIR(4));
+                    printw("YOU WON!!!");
+                    attroff(COLOR_PAIR(4));
+                    refresh();
                     d = 1;
-                    printf("\nDo you want to continue:\n for YES enter 'y'\n for NO enter 'n'\n");
-                    scanf(" %c", &con);
+                    move(7,23);
+                    printw("Do you want to continue:");
+                    refresh();
+                    move(8,17);
+                    printw("for YES enter 'Y' || for NO enter 'N'");
+                    refresh();
+                    con = getch();
                     if (con == 'N' || con == 'n') {
                         return -1;
                     }
@@ -285,65 +396,182 @@ int play_game(int board[20][20], int RC)
                 return 0;
             generate_random(board,tiles,RC);
             reverse_board(movement, board,RC);
-        } else if (!strcmp(movement, "left")) {
+        } else if (movement == 'A'|| movement == 'a') {
             add_tiles_horizontaly(board,RC);
             tiles = check_board(board,RC);
             if (tiles == -1) {
                 while(d==0) {
+                    clear();
+                    refresh();
+                    print_borders();
                     char con;
-                    printf("\nyou won!!!!!!!\n");
+                    refresh();
+                    move(5,30);
+                    attron(COLOR_PAIR(4));
+                    printw("YOU WON!!!");
+                    attroff(COLOR_PAIR(4));
+                    refresh();
                     d = 1;
-                    printf("\nDo you want to continue:\n for YES enter 'y'\n for NO enter 'n'\n");
-                    scanf(" %c", &con);
-                    if (con == 'n' || con == 'N') {
+                    move(7,23);
+                    printw("Do you want to continue:");
+                    refresh();
+                    move(8,17);
+                    printw("for YES enter 'Y' || for NO enter 'N'");
+                    refresh();
+                    con = getch();
+                    if (con == 'N' || con == 'n') {
                         return -1;
                     }
                 }
             } else if (tiles == 0)
                 return 0;
             generate_random(board,tiles,RC);
-        } else if (!strcmp(movement, "exit")) {
+        } else if (movement == 'e' || movement == 'E') {
             return 1;
-        } else if (!strcmp(movement, "put")){
+        } else if (movement == 'p'){
+            clear();
+            refresh();
+            move(2,0);
+            attron(COLOR_PAIR(3));
+            printw("WELCOME TO THE CHAMBER OF SECRET");
+            attroff(COLOR_PAIR(3));
+            refresh();
             int i1, j1, value1, valid;
-            scanf("%d %d %d", &i1, &j1, &value1);
+            refresh();
+            move(4,0);
+            scanw("%d %d %d", &i1, &j1, &value1);
+            refresh();
             valid = isPowerOfTwo(value1);
             if (i1 < 1 || i1 > RC || j1 < 1 || j1 > RC) {
-                printf("\ncoordinate out of range!\n");
+                refresh();
+                move(5,0);
+                printw("coordinate out of range! ");
+                refresh();
+                move(6,0);
+                printw("PRESS 'p' AGAIN");
+                refresh();
                 continue;
             }
             if(board[i1-1][j1-1] != 0) {
-                printf("\ncell is not empty!\n");
+                refresh();
+                move(5,0);
+                printf("cell is not empty! ");
+                refresh();
+                move(6,0);
+                printw("PRESS 'p' AGAIN");
+                refresh();
                 continue;
             }
             if (valid == 0 || value1 == 1) {
-                printf("\ninvalid value!\n");
+                refresh();
+                move(5,0);
+                printf("invalid value!");
+                refresh();
+                move(6,0);
+                printw("PRESS 'p' AGAIN");
+                refresh();
                 continue;
             }
             board[i1-1][j1-1] = value1;
+            refresh();
         } else {
-            printf("Do not recognize this movement please type again\n");
+            refresh();
+            move(23,1);
+            attron(COLOR_PAIR(2));
+            printw("Do not recognize this movement please try again");
+            attroff(COLOR_PAIR(2));
+            refresh();
             continue;
         }
         print_board(board,RC);
+        for (int i = 0; i < RC; ++i) {
+            for (int j = 0; j < RC; ++j) {
+                score = board[i][j] + score;
+            }
+        }
+        refresh();
+        move(1,62);
+        attron(COLOR_PAIR(6));
+        printw("(%d)", score);
+        attroff(COLOR_PAIR(6));
+        refresh();
     }
 }
 
 
-
 int GameMenu (char username[30]) {
+    clear();
+    refresh();
+    print_borders();
+    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(3, COLOR_BLUE, COLOR_BLACK);
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(1,COLOR_RED,COLOR_BLACK);
     int p1 = 0;
-    char wmenu[20];
-    printf("\nWelcome to the Game\n");
-    printf("You have several choices\nFor start type 'start'\nfor seeing scoreboard type 'scoreboard'\nfor logout type 'logout'\n");
-    scanf("%s",wmenu);
-    if (strcmp(wmenu,"start") == 0) {
+    char wmenu;
+    refresh();
+    move(2,25);
+    attron(COLOR_PAIR(2));
+    printw("Welcome to the Game");
+    attroff(COLOR_PAIR(2));
+    refresh();
+    move(4,32);
+    attron(A_BLINK);
+    printw("START");
+    attroff(A_BLINK);
+    refresh();
+    move(5, 30);
+    printw("PRESS 's'");
+    move(9,29);
+    attron(COLOR_PAIR(3));
+    printw("SCOREBOARD");
+    attroff(COLOR_PAIR(3));
+    refresh();
+    move(10, 30);
+    printw("PRESS 'c'");
+    move(14,31);
+    attron(COLOR_PAIR(5));
+    printw("LOGOUT");
+    attroff(COLOR_PAIR(5));
+    refresh();
+    move(15, 30);
+    printw("PRESS 'l'");
+    move(19,32);
+    printw("EXIT");
+    move(20, 30);
+    printw("PRESS 'e'");
+    refresh();
+    move(24,0);
+    wmenu = getch();
+    if (wmenu == 's' || wmenu == 'S') {
         int score = 0;
         int rc;
-        printf("Enter the size of the game:\n");
-        scanf("%d", &rc);
+        clear();
+        refresh();
+        print_borders();
+        refresh();
+        move(1,2);
+        printw("Please enter dimension!");
+        refresh();
+        move(1,26);
+        attron(COLOR_PAIR(3));
+        printw("[  ]");
+        attroff(COLOR_PAIR(3));
+        refresh();
+        move(1,27);
+        scanw("%d", &rc);
+        refresh();
         if (rc < 3) {
-            printf("invalid size, size must be bigger than 2\n");
+            refresh();
+            move(3,2);
+            printw("Dimension is not valid!");
+            refresh();
+            move(5,2);
+            attron(A_BLINK);
+            printw("To continiue press any key: ");
+            attroff(A_BLINK);
+            refresh();
+            getch();
             p1 = GameMenu(username);
             if (p1==1) return 1;
         }
@@ -367,120 +595,263 @@ int GameMenu (char username[30]) {
             case 1:
                 break;
             case 0:
-                printf("YOU LOSE, NOW CRY\n"	\
-	   "Byyyeee\n");
+                clear();
+                refresh();
+                print_borders();
+                refresh();
+                move(4,26);
+                attron(COLOR_PAIR(5));
+                printw("|-----------------|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(5, 26);
+                attron(COLOR_PAIR(5));
+                printw("|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                printw("YOU LOSE, NOW CRY");
+                refresh();
+                attron(COLOR_PAIR(5));
+                printw("|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(6,26);
+                attron(COLOR_PAIR(5));
+                printw("|-----------------|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(10,31);
+                attron(COLOR_PAIR(5));
+                printw("|-------|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(11, 31);
+                attron(COLOR_PAIR(5));
+                printw("|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                printw("Byyyeee");
+                refresh();
+                attron(COLOR_PAIR(5));
+                printw("|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(12,31);
+                attron(COLOR_PAIR(5));
+                printw("|-------|");
+                attroff(COLOR_PAIR(5));
+                refresh();
+                move(21, 23);
+                attron(A_BLINK);
+                printw("PRESS ANY KEY TO CONTINUE");
+                attroff(A_BLINK);
+                refresh();
+                getch();
                 break;
             case -1:
-                printf("You think this is the end, you fool.\nThe real game is starting just right now\n");
+                clear();
+                refresh();
+                print_borders();
+                refresh();
+                move(4, 23);
+                printw("You think this is the end");
+                refresh();
+                move(10,32);
+                printw("YOU FOOL");
+                move(15, 24);
+                attron(COLOR_PAIR(1));
+                printw("Now the real game starts");
+                attroff(COLOR_PAIR(1));
+                refresh();
+                move(21, 23);
+                attron(A_BLINK);
+                printw("PRESS ANY KEY TO CONTINUE");
+                attroff(A_BLINK);
+                refresh();
+                getch();
                 break;
         }
         struct usescore us;
         us.score = score;
         int new_score = score;
         for (int i = 0; i < 30; ++i) {
-                us.username[i] = username[i];
+            us.username[i] = username[i];
         }
         char new_username[30];
         strcpy(new_username,us.username);
         if(strcmp(username,"guest")!= 0) {
             FILE *f = fopen("score.txt", "r+");
             int found = 0;
+            int d = 0;
             while (fscanf(f, "%s %d", us.username, &us.score) != EOF) {
                 if (strcmp(us.username, username) == 0) {
                     fseek(f,-sizeof(us),SEEK_CUR);
+                    if (us.score >= score) {
+                        d = 1;
+                    }
                     found = 1;
                     break;
                 }
             }
-            if (!found) {
-                fprintf(f, "%s %d", new_username, new_score);
-            } else {
-                long int size = ftell(f);
-                FILE *temp = fopen("temp.txt", "w");
-                rewind(f);
-                char line[100];
-                while (fgets(line, 100, f)) {
-                    if (strncmp(line, username, strlen(username)) != 0) {
-                        fputs(line, temp);
-                    } else {
-                        fprintf(temp, "%s %d\n", us.username, new_score);
+            if (d == 0) {
+                if (!found) {
+                    fprintf(f, "%s %d", new_username, new_score);
+                } else {
+                    long int size = ftell(f);
+                    FILE *temp = fopen("temp.txt", "w");
+                    rewind(f);
+                    char line[100];
+                    while (fgets(line, 100, f)) {
+                        if (strncmp(line, username, strlen(username)) != 0) {
+                            fputs(line, temp);
+                        } else {
+                            fprintf(temp, "%s %d\n", us.username, new_score);
+                        }
                     }
+                    fclose(f);
+                    fclose(temp);
+                    remove("score.txt");
+                    rename("temp.txt", "score.txt");
                 }
-                fclose(f);
-                fclose(temp);
-                remove("score.txt");
-                rename("temp.txt", "score.txt");
             }
             fclose(f);
 
         }
         p1 = GameMenu(username);
         if (p1==1) return 1;
-    } else if (strcmp(wmenu,"scoreboard") == 0) {
+    } else if (wmenu == 'c' || wmenu == 'C') {
         int r = 0;
-        char rank[20];
+        char rank;
         r = scoreboard(username);
-            printf("\nIf you want to see your rank before exit enter 'myrank' and for just exit enter back:\n");
-            scanf("%s", rank);
-            if (strcmp(rank, "myrank") == 0) {
-                if (strcmp(username,"guest")!=0) {
-                    printf("\nCongratulations, Your rank is '%d'\n", r + 1);
-                    p1 = GameMenu(username);
-                    if (p1==1) return 1;
-                } else {
-                    printf("\nyou are guest!\n");
-                    p1 = GameMenu(username);
-                    if (p1==1) return 1;
-                }
-            } else if (strcmp(rank, "back") == 0){
-                p1 = GameMenu(username);
-                if (p1==1) return 1;
-            }
 
-    } else if (strcmp(wmenu,"logout") == 0) {
+        if (strcmp(username,"guest")!=0) {
+            refresh();
+            move(20,2);
+            printw("Congratulations, Your rank is '%d'", r + 1);
+            refresh();
+        } else {
+            refresh();
+            move(20,2);
+            printw("you are guest!");
+            refresh();
+        }
+        refresh();
+        move(21,2);
+        attron(A_BLINK);
+        printw("FOR GETTING BACK JUST PRESS 'B'");
+        attroff(A_BLINK);
+        refresh();
+        rank = getch();
+        if (rank == 'b' || rank == 'B') {
+            p1 = GameMenu(username);
+            if (p1==1) return 1;
+        }
+
+    } else if (wmenu == 'l' || wmenu == 'L') {
         return 1;
-    }else if (strcmp(wmenu,"exit") == 0) {
+    }else if (wmenu == 'e' || wmenu == 'E' ) {
         return 0;
     } else {
-        printf("invalid command");
+        refresh();
+        move(24,0);
+        printw("invalid command");
+        refresh();
         p1 = GameMenu(username);
         if (p1==1) return 1;
     }
     return 0;
 }
 
-int main() {
+
+
+int main(void) {
+    int r = 0;
     int p = 1;
+    initscr();
+    refresh();
+    start_color();
     while (p == 1) {
+        clear();
+        refresh();
+        print_borders();
+        refresh();
         p = 0;
         int c = 1;
-        char enter[20];
-        printf("How do you want to enter:\n");
-        printf("\nIf you want to signup enter your username and password like this:\nsignup <username> <password>\nfor login, like this:\nlogin <username> <password>\nand for continue as a guest, just type guest and then press enter:\n");
-        scanf("%s", enter);
-        if (strcmp(enter, "signup") == 0) {
+        char enter;
+        refresh();
+        move(3, 32);
+        printw("SIGNUP");
+        refresh();
+        move(4, 31);
+        printw("PRESS 's'");
+        move(8, 32);
+        printw("LOGIN");
+        refresh();
+        move(9, 31);
+        printw("PRESS 'l'");
+        refresh();
+        move(13, 32);
+        printw("GUEST");
+        refresh();
+        move(14, 31);
+        printw("PRESS 'g'");
+        refresh();
+        move(18, 32);
+        printw("EXIT");
+        refresh();
+        move(19,31);
+        printw("PRESS 'e'");
+        refresh();
+        enter = getch();
+        if (enter == 's' || enter == 'S') {
+            system("CLS");;
             struct log w;
             while (c == 1) {
+                clear();
+                if (r==1) {
+                    refresh();
+                    move(4, 19);
+                    printw("The username has already taken");
+                    r = r-1;
+                    refresh();
+                }
+                r++;
+                refresh();
                 w = signup();
                 c = w.what;
-                if (c == 2) break;
+                if (c == 2) return 0;
             }
             p = GameMenu(w.username);
 
-        } else if (strcmp(enter, "login") == 0) {
+        } else if (enter == 'l' || enter == 'L') {
+            system("CLS");
             struct log w;
-            while (c == 1) {
+            while (c == 1 || c==3 || c==4) {
+                clear();
+                if(c==3) {
+                    refresh();
+                    move(10, 25);
+                    printw("USERNAME NOT FOUND!");
+                    refresh();
+                }else if (c == 4) {
+                    refresh();
+                    move(10, 25);
+                    printw("PASSWORD INCORRECT!");
+                    refresh();
+                }
                 w = login();
                 c = w.what;
-                if (c == 2) break;
+                if (c == 2) return 0;
             }
             p = GameMenu(w.username);
-        } else if (strcmp(enter, "guest") == 0) {
+        } else if (enter == 'g' || enter == 'G') {
             p = GameMenu("guest");
-        } else if (strcmp(enter, "exit") == 0) {
+        } else if (enter == 'e' || enter == 'E') {
             return 0;
         } else {
-            printf("invalid command");
+            move(24,0);
+            printw("invalid command");
+            refresh();
             p = 1;
         }
     }
@@ -494,44 +865,61 @@ struct log login (void) {
     log = fopen("login.txt","r");
 
     struct usepass l;
-
-    scanf("%s", username);
+    refresh();
+    print_borders();
+    refresh();
+    move(17, 19);
+    printw("IF YOU WANT TO EXIT ENTER 'exit'");
+    refresh();
+    move(3, 25);
+    printw("Enter Your USERNAME:");
+    refresh();
+    scanw("%s", username);
     if (strcmp(username,"exit") == 0) {
         ll.what = 2;
         return ll;
     }
-    //username[strcspn(username, "\n")] = 0;
-    scanf("%s", password);
-    //password[strcspn(password, "\n")] = 0;
+    move(15, 25);
+    printw("Enter Your PASSWORD:");
+    refresh();
+    scanw("%s", password);
+
     if (strcmp(password,"exit") == 0) {
         ll.what = 2;
         return ll;
     }
+    fseek(log, 0, SEEK_SET);
     while(fread(&l,sizeof(l),1,log)) {
-        if (strcmp(username, l.username) == 0 && strcmp(password, l.password) == 0) {
-            printf("\nSuccessful Login\n");
-            fclose(log);
-            ll.what = 0;
-            for (int i = 0; i < 30; ++i) {
-                ll.username[i]=username[i];
+        if (strcmp(username, l.username) == 0) {
+            if (strcmp(password, l.password) == 0) {
+                refresh();
+                move(24,0);
+                printw("Successful Login");
+                refresh();
+                fclose(log);
+                ll.what = 0;
+                for (int i = 0; i < 30; ++i) {
+                    ll.username[i]=username[i];
+                }
+                getch();
+                return ll;
+            } else {
+                fseek(log, 0, SEEK_SET);
+                ll.what = 4;
+                return ll;
             }
-            return ll;
         }
     }
     fseek(log, 0, SEEK_SET);
     while(fread(&l,sizeof(l),1,log)) {
         if (strcmp(username, l.username) != 0) {
-            printf("\nusername not found!\nfor login just enter your correct username and password like this\n<username> <password>\n");
             fseek(log, 0, SEEK_SET);
-            ll.what = 1;
-            return ll;
-        } else if (strcmp(username, l.username) == 0 && strcmp(password, l.password) != 0) {
-            printf("\npassword incorrect!\nfor login just enter your correct username and password like this\n<username> <password>\n");
-            fseek(log, 0, SEEK_SET);
-            ll.what = 1;
+            ll.what = 3;
             return ll;
         }
     }
+
+
 
 }
 
@@ -541,26 +929,48 @@ struct log signup(void) {
     FILE *log;
     log=fopen("login.txt","a+");
     struct usepass l;
-
-    scanf("%s",username);
+    refresh();
+    print_borders();
+    refresh();
+    move(17, 19);
+    printw("IF YOU WANT TO EXIT ENTER 'exit'");
+    refresh();
+    move(3, 25);
+    printw("Enter Your USERNAME:");
+    refresh();
+    scanw("%s",username);
     if (strcmp(username,"exit") == 0) {
-        ll.what = 2;
-        return ll;
-    }
-    scanf("%s",l.password);
-    if (strcmp(l.password,"exit") == 0) {
         ll.what = 2;
         return ll;
     }
     while(fread(&l,sizeof(l),1,log)) {
         if(strcmp(username,l.username)==0) {
-            printf("\nThe username has already taken\nfor signup just enter your username and password like this\n<username> <password>\n");
             fclose(log);
             fseek(log, 0, SEEK_SET);
             ll.what = 1;
             return ll;
         }
     }
+    refresh();
+    clear();
+    refresh();
+    print_borders();
+    refresh();
+    move(3, 25);
+    printw("Enter Your USERNAME:");
+    refresh();
+    move(17, 19);
+    printw("IF YOU WANT TO EXIT ENTER 'exit'");
+    refresh();
+    move(15, 25);
+    printw("Enter Your PASSWORD:");
+    refresh();
+    scanw("%s",l.password);
+    if (strcmp(l.password,"exit") == 0) {
+        ll.what = 2;
+        return ll;
+    }
+
     for (int i = 0; i < 30; ++i) {
         l.username[i] = username[i];
     }
@@ -569,9 +979,11 @@ struct log signup(void) {
     }
     fwrite(&l,sizeof(l),1,log);
     fclose(log);
-
-    printf("\nRegistration Successful!\n");
-    getchar();
+    refresh();
+    move(24,0);
+    printw("Registration Successful!");
+    refresh();
+    getch();
     system("CLS");
     ll.what = 0;
     return ll;
